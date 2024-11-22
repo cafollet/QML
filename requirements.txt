@@ -1,0 +1,2 @@
+PennyLane~=0.39.0
+scipy~=1.9.3
