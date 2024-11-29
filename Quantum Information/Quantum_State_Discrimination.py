@@ -32,33 +32,42 @@ def maximal_probability(theta_1, theta_2, p_1, p_2):
         qml.RY(rotation_lambda, wires=0)
         return qml.probs(0)
 
+    # Defining the cost function to minimize
+    def cost(rot_lambdas, phis):
+        rot_lambda = rot_lambdas[0]
+        phi_1 = phis[0]
+        phi_2 = phis[1]
+        # Run the circuit defined above for both initial states, and retrieve the Probabilities of achieving each state
+        sig_1 = circuit(phi_1, rot_lambda)
+        sig_2 = circuit(phi_2, rot_lambda)
+        q_1 = sig_1[0]
+        q_2 = sig_2[1]
+        p_succ = (p_1 * q_1) + (p_2 * q_2)
+        # cost function returns value to be minimized, namely the complement to the probability we want to maximize
+        return 1-p_succ
+
     # Initial States |phi_1> and |phi_2>
     phi_1 = np.asarray([np.cos(theta_1),np.sin(theta_1)])
     phi_2 = np.asarray([np.cos(theta_2), np.sin(theta_2)])
 
-    # Construct the optimized rotation matrix stemming from the
-    # equation p_1q_1 + p_2q_2 (q1 and q2 are the variables to maximize P)
-    sin_1 = np.sin(theta_1)
-    sin_2 = np.sin(theta_2 + (np.pi*0.5))
-    cos_1 = np.cos(theta_1)
-    cos_2 = np.cos(theta_2 - (np.pi*0.5))
 
-    numerator = (p_2*sin_2) - (p_1 * sin_1)
-    denominator = (p_1 * cos_1) + (p_2 * cos_2)
+    # First guess lambda
+    rotation_lambda_guess = np.array([1.])
+    # Minimize cost function, which maximizes total probability
+    optim = qml.AdagradOptimizer(stepsize=0.1)
+    conv_tol = 1e-10
+    phi_states = [phi_1, phi_2]
+    rotation_lambda_guess, conv = optim.step_and_cost(lambda x: cost(x, phi_states), rotation_lambda_guess)
+    prev_cost = conv
 
-    rotation_lambda = 2.0 * np.arctan(numerator / denominator)
-
-    # Run the circuit defined above for both initial states, and retrieve the Probabilities of achieving each state
-    sig_1 = circuit(phi_1, rotation_lambda)
-    sig_2 = circuit(phi_2, rotation_lambda)
-    q_1 = sig_1[0]
-    q_2 = sig_2[1]
-    p_succ = (p_1*q_1) + (p_2*q_2)
+    while conv > conv_tol:
+        rotation_lambda_guess, cost_var = optim.step_and_cost(lambda x: cost(x, phi_states), rotation_lambda_guess)
+        conv = abs(cost_var - prev_cost)
+        prev_cost = cost_var
+        print(1-cost_var)
 
     # Return the highest probability of distinguishing the states
-    # As of right now, only returns highest probability with 7e-2% tolerance
-    # future plan to use SGD?
-    return p_succ
+    return 1-cost(rotation_lambda_guess, phi_states)
 
 
 
@@ -74,9 +83,9 @@ def run(test_case_input: str) -> str:
 def check(solution_output: str, expected_output: str) -> None:
     solution_output = json.loads(solution_output)
     expected_output = json.loads(expected_output)
-
+    print(solution_output)
     # I changed this assertion from rtol=1e-4, as
-    assert np.allclose(solution_output, expected_output, rtol=7e-4)
+    assert np.allclose(solution_output, expected_output, rtol=1e-4)
 
 
 # These are the public test cases
