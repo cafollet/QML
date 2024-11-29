@@ -1,6 +1,7 @@
 # Pennylane Challenge coding projects
 
-### Trains from MNIST Dataset and uses a Variational Auto-Encoder to generate new numbers from 0-9 from the latent space, and trains labels by a FCNN, which is then used to label and export the generated numbers.
+### Selection of multiple QC coding problems sourced from pennylane.ai
+
 #
 ## Dependencies
 
